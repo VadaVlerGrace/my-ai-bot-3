@@ -13,31 +13,22 @@ client = AI21Client(api_key=AI21_KEY)
 
 @app.post("/ai")
 def ai():
-    data = request.json
-    user_text = data.get("text", "")
+    data = request.json  # это список
+    if not data:
+        return {"reply": "Ошибка: нет данных"}, 400
 
-    if not user_text:
-        return {"reply": "Пустой запрос"}, 400
+    user_text = data[0].get("text", "")  # берем текст из первого элемента списка
 
-    # Формируем сообщение
-    messages = [
-        ChatMessage(role="user", content=user_text)
-    ]
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_KEY}"
 
-    try:
-        # Запрос к AI21
-        response = client.chat.completions.create(
-            model="jamba-instruct",  # модель AI21
-            messages=messages,
-            max_tokens=150
-        )
+    body = {
+        "contents": [
+            {"parts": [{"text": user_text}]}
+        ]
+    }
 
-        reply = response.choices[0].message.content
-        return {"reply": reply}
-
-    except Exception as e:
-        return {"reply": f"Ошибка сервера: {e}"}, 500
+    result = requests.post(url, json=body).json()
+    reply = result["candidates"][0]["content"]["parts"][0]["text"]
+    return {"reply": reply}
 
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
