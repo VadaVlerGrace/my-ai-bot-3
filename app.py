@@ -20,6 +20,7 @@ def get_ai21_reply(user_text):
 @app.route("/ai", methods=["POST"])
 def ai():
     data = request.json
+    print("DEBUG:", data)
 
     # Проверяем, пришёл ли словарь или список
     if isinstance(data, dict):
@@ -40,5 +41,6 @@ def ai():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
+
 
 
