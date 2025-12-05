@@ -20,17 +20,16 @@ def get_ai21_reply(user_text):
 @app.route("/ai", methods=["POST"])
 def ai():
     data = request.json
-
-    # Ищем текст безопасно
-    user_text = None
     if isinstance(data, list) and len(data) > 0:
         try:
             user_text = data[0]["info"]["message"]["message"]["text"]
-        except (KeyError, TypeError):
-            pass
+        except KeyError:
+            return jsonify({"error": "Не удалось извлечь текст"}), 400
+    else:
+        return jsonify({"error": "Некорректный формат данных"}), 400
 
     if not user_text:
-        return jsonify({"error": "Не удалось извлечь текст"}), 400
+        return jsonify({"error": "Нет текста для обработки"}), 400
 
     reply = get_ai21_reply(user_text)
     return jsonify({"reply": reply})
