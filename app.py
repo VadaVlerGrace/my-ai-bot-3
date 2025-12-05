@@ -1,34 +1,32 @@
 from flask import Flask, request
-from ai21 import AI21Client
-from ai21.models.chat import ChatMessage
+import requests
 
 app = Flask(__name__)
 
-# ТВОЙ ключ AI21
 AI21_KEY = "0f2b2709-b2fc-4088-98dc-7c977dd591f0"
-
-# Инициализация клиента
-client = AI21Client(api_key=AI21_KEY)
-
 
 @app.post("/ai")
 def ai():
-    data = request.json  # это список
+    data = request.json
     if not data:
-        return {"reply": "Ошибка: нет данных"}, 400
+        return {"reply": "Нет данных"}, 400
 
-    user_text = data[0].get("text", "")  # берем текст из первого элемента списка
+    user_text = data.get("text", "")
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_KEY}"
+    url = "https://api.ai21.com/studio/v1/j1-large/complete"
 
-    body = {
-        "contents": [
-            {"parts": [{"text": user_text}]}
-        ]
+    headers = {
+        "Authorization": f"Bearer {AI21_KEY}",
+        "Content-Type": "application/json"
     }
 
-    result = requests.post(url, json=body).json()
-    reply = result["candidates"][0]["content"]["parts"][0]["text"]
+    body = {
+        "prompt": user_text,
+        "numResults": 1,
+        "maxTokens": 100,
+        "temperature": 0.7
+    }
+
+    result = requests.post(url, json=body, headers=headers).json()
+    reply = result["completions"][0]["data"]["text"]
     return {"reply": reply}
-
-
