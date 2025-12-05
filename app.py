@@ -21,10 +21,15 @@ def get_ai21_reply(user_text):
 def ai():
     data = request.json
 
-    # Проверка что пришёл список и есть нужная структура
-    try:
-        user_text = data[0]["info"]["message"]["message"]["text"]
-    except (IndexError, KeyError, TypeError):
+    # Ищем текст безопасно
+    user_text = None
+    if isinstance(data, list) and len(data) > 0:
+        try:
+            user_text = data[0]["info"]["message"]["message"]["text"]
+        except (KeyError, TypeError):
+            pass
+
+    if not user_text:
         return jsonify({"error": "Не удалось извлечь текст"}), 400
 
     reply = get_ai21_reply(user_text)
