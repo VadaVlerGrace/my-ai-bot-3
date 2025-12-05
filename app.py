@@ -5,37 +5,45 @@ app = Flask(__name__)
 AI21_KEY = "0f2b2709-b2fc-4088-98dc-7c977dd591f0"
 
 def get_ai21_reply(user_text):
+    """Запрос к AI21 и безопасное извлечение ответа"""
     url = "https://api.ai21.com/studio/v1/j1-large/complete"
     headers = {"Authorization": f"Bearer {AI21_KEY}"}
     body = {
         "prompt": user_text,
-        "maxTokens": 50,
+        "maxTokens": 100,
         "temperature": 0.7
     }
-    response = requests.post(url, json=body, headers=headers)
-    result = response.json()
-    return result["completions"][0]["data"]["text"]
+    
+    try:
+        response = requests.post(url, json=body, headers=headers, timeout=10)
+        result = response.json()
+        if "completions" in result and len(result["completions"]) > 0:
+            return result["completions"][0]["data"]["text"]
+        else:
+            return "Ошибка: модель не вернула ответ"
+    except Exception as e:
+        return f"Ошибка при запросе к AI21: {e}"
 
-def extract_text_from_sendpulse(data):
-    """Попытка безопасно достать текст из любого вида входящего JSON SendPulse"""
-    if isinstance(data, list) and len(data) > 0:
-        message_info = data[0].get("info", {}).get("message", {})
-        # сначала ищем обычный текст
-        if "message" in message_info and "text" in message_info["message"]:
-            return message_info["message"]["text"]
-        # если есть channel_data, проверяем там
-        channel_text = message_info.get("channel_data", {}).get("message", {}).get("text")
-        if channel_text:
-            return channel_text
-    return None
-
-@app.route("/", methods=["POST"])
 @app.route("/ai", methods=["POST"])
 def ai():
+    """Обрабатываем POST-запрос с JSON: {"text": "привет"}"""
     data = request.json
-    user_text = extract_text_from_sendpulse(data)
+    if not data or "text" not in data:
+        return jsonify({"error": "Нет текста для обработки"}), 400
+    
+    user_text = data["text"].strip()
     if not user_text:
-        return jsonify({"error": "Не удалось извлечь текст"}), 400
+        return jsonify({"error": "Текст пустой"}), 400
 
     reply = get_ai21_reply(user_text)
     return jsonify({"reply": reply})
+
+@app.route("/", methods=["GET"])
+def index():
+    """Просто проверка работоспособности сервиса"""
+    return "Бот работает. Отправляйте POST-запрос на /ai с JSON {'text':'ваш текст'}"
+
+if __name__ == "__main__":
+    import os
+    port = int(os.environ.get("PORT", 10000))  # Render требует динамический порт
+    app.run(host="0.0.0.0", port=port)
