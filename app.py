@@ -4,7 +4,7 @@ import os
 
 app = Flask(__name__)
 
-# Ваш ключ AI21
+# Ваш ключ AI21 — замените на свой рабочий
 AI21_KEY = "0f2b2709-b2fc-4088-98dc-7c977dd591f0"
 
 def get_ai21_reply(user_text):
@@ -28,9 +28,8 @@ def get_ai21_reply(user_text):
         return f"Ошибка при запросе к AI21: {e}"
 
 @app.route("/ai", methods=["POST"])
-@app.route("/", methods=["POST"])
 def ai():
-    """Обрабатываем POST-запрос с JSON {"text": "ваш текст"}"""
+    """POST-запрос с JSON {"text": "ваш текст"}"""
     data = request.json
     if not data or "text" not in data:
         return jsonify({"error": "Нет текста для обработки"}), 400
@@ -45,7 +44,7 @@ def ai():
 @app.route("/", methods=["GET"])
 def index():
     """Просто проверка работоспособности сервиса"""
-    return "Бот работает. Отправляйте POST-запрос на /ai или / с JSON {'text':'ваш текст'}"
+    return "Бот работает. Отправляйте POST-запрос на /ai с JSON {'text':'ваш текст'}"
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))  # Render требует динамический порт
