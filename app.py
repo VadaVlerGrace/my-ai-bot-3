@@ -16,13 +16,29 @@ def get_ai21_reply(user_text):
     result = response.json()
     return result["completions"][0]["data"]["text"]
 
-# Обрабатываем и корень /, и /ai
 @app.route("/", methods=["POST"])
 @app.route("/ai", methods=["POST"])
 def ai():
     data = request.json
-    user_text = data.get("text", "")
+
+    # Проверяем, пришёл ли словарь или список
+    if isinstance(data, dict):
+        user_text = data.get("text", "")
+    elif isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
+        user_text = data[0].get("text", "")
+    else:
+        user_text = ""
+
     if not user_text:
         return jsonify({"error": "Нет текста для обработки"}), 400
-    reply = get_ai21_reply(user_text)
-    return jsonify({"reply": reply})
+
+    try:
+        reply = get_ai21_reply(user_text)
+        return jsonify({"reply": reply})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
+
+
