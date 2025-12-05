@@ -67,37 +67,46 @@ def ai():
     # Попытка получить данные как JSON
     data = request.json
     
-    # Если JSON не сработал (редко, но возможно)
+    # Если JSON не сработал, пытаемся получить данные как ФОРМУ (резервный вариант)
     if data is None:
         data = request.form.to_dict()
+        print(f"Получены данные формы: {data}")
+    else:
+        print(f"Получены данные JSON: {data}")
 
-    print(f"Получены данные: {data}") # Оставляем для отладки
+    # --- НОВАЯ ЛОГИКА ОБРАБОТКИ СПИСКА ---
+    # Если data — это список, берем первый элемент, так как это обычно один вебхук
+    if isinstance(data, list) and data:
+        webhook_data = data[0]
+    elif isinstance(data, dict):
+        webhook_data = data
+    else:
+        # Если это не список и не словарь, мы не знаем, что это
+        return jsonify({
+            "error": "Неверный формат данных. Ожидался JSON-объект или массив.",
+            "received_type": type(data).__name__
+        }), 400
 
-    # --- НОВАЯ ЛОГИКА ИЗВЛЕЧЕНИЯ ТЕКСТА ---
+    # --- ЛОГИКА ИЗВЛЕЧЕНИЯ ТЕКСТА ИЗ webhook_data ---
     user_text = ""
     try:
-        # Ваш лог показал, что текст находится по пути:
-        # data -> contact -> last_message
-        if isinstance(data, dict) and 'contact' in data and 'last_message' in data['contact']:
-             user_text = data['contact']['last_message']
+        # Вариант 1: Извлечение текста по пути 'contact' -> 'last_message' (самый простой)
+        if 'contact' in webhook_data and 'last_message' in webhook_data['contact']:
+             user_text = webhook_data['contact']['last_message']
         
-        # Или, как запасной вариант (более глубокий путь из вашего JSON):
-        elif isinstance(data, dict) and 'info' in data and 'message' in data['info'] and \
-             'channel_data' in data['info']['message'] and 'message' in data['info']['message']['channel_data'] and \
-             'text' in data['info']['message']['channel_data']['message']:
+        # Вариант 2: Извлечение текста по более глубокому пути 'info' -> 'message' -> ... -> 'text'
+        elif 'info' in webhook_data and 'message' in webhook_data['info'] and \
+             'channel_data' in webhook_data['info']['message'] and 'message' in webhook_data['info']['message']['channel_data'] and \
+             'text' in webhook_data['info']['message']['channel_data']['message']:
              
-             user_text = data['info']['message']['channel_data']['message']['text']
+             user_text = webhook_data['info']['message']['channel_data']['message']['text']
         
-        # Если ни один из вариантов не дал текст, возвращаем ошибку
         else:
             return jsonify({
-                "error": "Не удалось найти текст в сложной структуре вебхука SendPulse.",
-                "data_structure": "Ожидались ключи 'contact' -> 'last_message' или 'info' -> 'message' -> ... -> 'text'.",
-                "received_keys": list(data.keys()) if isinstance(data, dict) else "Not a dict"
+                "error": "Не удалось найти текст в сложной структуре вебхука SendPulse. Отсутствует ключ 'last_message'.",
             }), 400
 
     except Exception as e:
-        # Обработка ошибок, если структура данных внезапно изменится
         print(f"Ошибка при парсинге данных SendPulse: {e}")
         return jsonify({"error": f"Ошибка при разборе вебхука: {e}"}), 400
 
@@ -112,6 +121,8 @@ def ai():
     
     return jsonify({"reply": reply})
 
+# Остальной код (get_ai21_reply, index, if __name__ == "__main__") остается прежним.
+
 # Остальной код (app.route("/", methods=["GET"]), get_ai21_reply, __name__ == "__main__") 
 # остается прежним из предыдущего ответа.
 
@@ -121,4 +132,5 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     # Включаем отладку для локального тестирования
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
