@@ -20,27 +20,12 @@ def get_ai21_reply(user_text):
 @app.route("/ai", methods=["POST"])
 def ai():
     data = request.json
-    print("DEBUG:", data)
 
-    # Проверяем, пришёл ли словарь или список
-    if isinstance(data, dict):
-        user_text = data.get("text", "")
-    elif isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
-        user_text = data[0].get("text", "")
-    else:
-        user_text = ""
-
-    if not user_text:
-        return jsonify({"error": "Нет текста для обработки"}), 400
-
+    # Проверка что пришёл список и есть нужная структура
     try:
-        reply = get_ai21_reply(user_text)
-        return jsonify({"reply": reply})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        user_text = data[0]["info"]["message"]["message"]["text"]
+    except (IndexError, KeyError, TypeError):
+        return jsonify({"error": "Не удалось извлечь текст"}), 400
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
-
-
-
+    reply = get_ai21_reply(user_text)
+    return jsonify({"reply": reply})
